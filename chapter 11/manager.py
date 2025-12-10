@@ -4,7 +4,7 @@ class Employee:
         self.salary = salary
         
     def  getSalary(self):
-        return salary
+        return self.salary
 
 class Manager(Employee):
     def __init__(self, name, salary, bonus):
