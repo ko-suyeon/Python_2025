@@ -1,3 +1,4 @@
+#객체가 부딪혔을때 변수가 변경되도록 하는 코드
 import pygame
 import random
 
