@@ -1,0 +1,134 @@
+#all
+
+import pygame
+import random
+
+pygame.init()
+
+WIDTH, HEIGHT = 600, 400
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Multi Enemy + Movement + Sound + Collision")
+
+clock = pygame.time.Clock()
+
+# 사운드 로드 (파일 필요)
+collision_sound = pygame.mixer.Sound("hit.wav")  # 충돌시 소리
+
+#==================== Player 클래스 ====================#
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.image.load("dukbird.png")
+        self.image = pygame.transform.scale(self.image, (50, 50))
+        self.rect = self.image.get_rect(center=(WIDTH//2, HEIGHT//2))
+        self.speed = 4
+
+    def update(self):
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            self.rect.x -= self.speed
+        if keys[pygame.K_RIGHT]:
+            self.rect.x += self.speed
+        if keys[pygame.K_UP]:
+            self.rect.y -= self.speed
+        if keys[pygame.K_DOWN]:
+            self.rect.y += self.speed
+
+        self.rect.clamp_ip(screen.get_rect())
+
+
+#==================== Enemy 클래스 (여러 타입 지원) ====================#
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, move_type=0):
+        super().__init__()
+        self.image = pygame.Surface((40, 40))
+        self.image.fill((255, 80, 80))
+        self.rect = self.image.get_rect()
+        self.rect.x = random.randint(0, WIDTH - 40)
+        self.rect.y = random.randint(0, HEIGHT - 40)
+
+        # enemy movement type 저장
+        self.move_type = move_type
+
+        # 이동 속도
+        self.vx = random.choice([-2, -1, 1, 2])
+        self.vy = random.choice([-2, -1, 1, 2])
+
+    def update(self):
+        # 움직임 패턴
+        if self.move_type == 0:  
+            # 랜덤 걷기(Random walk)
+            self.rect.x += self.vx
+            self.rect.y += self.vy
+            if random.random() < 0.02:  # 가끔 방향 변경
+                self.vx = random.choice([-2, -1, 1, 2])
+                self.vy = random.choice([-2, -1, 1, 2])
+
+        elif self.move_type == 1:
+            # 좌우 이동
+            self.rect.x += self.vx
+            if self.rect.left <= 0 or self.rect.right >= WIDTH:
+                self.vx *= -1  # 벽에 닿으면 반대로
+
+        elif self.move_type == 2:
+            # 위아래 이동
+            self.rect.y += self.vy
+            if self.rect.top <= 0 or self.rect.bottom >= HEIGHT:
+                self.vy *= -1
+
+        # 화면 안에 있도록 유지
+        self.rect.clamp_ip(screen.get_rect())
+
+    def reset_position(self):
+        self.rect.x = random.randint(0, WIDTH - 40)
+        self.rect.y = random.randint(0, HEIGHT - 40)
+
+
+#==================== 그룹 생성 ====================#
+all_sprites = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
+
+player = Player()
+all_sprites.add(player)
+
+# Enemy 여러 개 생성 (3가지 타입 섞어서)
+for i in range(6):
+    enemy = Enemy(move_type=i % 3)
+    all_sprites.add(enemy)
+    enemy_group.add(enemy)
+
+# 점수 변수
+score = 0
+font = pygame.font.SysFont(None, 36)
+
+#==================== 메인 루프 ====================#
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    all_sprites.update()
+
+    #---------------- 충돌 체크 ----------------#
+    hits = pygame.sprite.spritecollide(player, enemy_group, False)
+
+    for enemy in hits:
+        score += 1                     # 점수 증가
+        collision_sound.play()         # 사운드 재생
+        enemy.reset_position()         # 적 위치 새로 배치
+
+    #---------------- 화면 그리기 ----------------#
+    screen.fill((170, 200, 255))
+    pygame.draw.rect(screen, (80, 170, 80), (0, HEIGHT - 60, WIDTH, 60))
+
+    all_sprites.draw(screen)
+
+    # 점수 출력
+    text = font.render(f"Score: {score}", True, (0, 0, 0))
+    screen.blit(text, (10, 10))
+
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
